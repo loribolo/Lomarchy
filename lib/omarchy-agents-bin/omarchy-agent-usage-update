@@ -1,0 +1,18 @@
+#!/bin/bash
+# cursor-agent stores its login in the OS secret store. Omarchy's Cursor and
+# Grok Bot collectors only read ~/.config/cursor/auth.json, so give them the
+# access token for this one refresh. The token is not written anywhere.
+
+set -o pipefail
+token=$(
+  secret-tool lookup service cursor-credentials account cursor-user 2>/dev/null |
+    python3 -c 'import json,sys
+try:
+    print(json.load(sys.stdin).get("accessToken") or "", end="")
+except Exception:
+    pass'
+) || token=
+if [[ -n $token ]]; then
+  export CURSOR_AUTH_TOKEN=$token
+fi
+exec /usr/share/omarchy/bin/omarchy-agent-usage-update "$@"
